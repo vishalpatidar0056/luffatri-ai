@@ -1,0 +1,186 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Luffatri AI</title>
+<script src="js/theme.js"></script>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="app-shell" id="appShell">
+
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="sidebar-brand">
+          <div class="avatar sidebar-logo">L</div>
+          <div class="brand-copy">
+            <span class="brand-text">Luffatri AI</span>
+            <span class="brand-meta">Character-driven chat</span>
+          </div>
+        </div>
+        <button class="icon-btn sidebar-collapse-btn" id="collapseSidebarBtn" title="Collapse sidebar" aria-label="Collapse sidebar">&#171;</button>
+      </div>
+
+      <div class="search-bar">
+        <span class="search-icon">&#128269;</span>
+        <input type="text" id="searchInput" placeholder="Search characters" />
+      </div>
+
+      <button class="btn btn-primary new-chat-btn" id="newChatBtn" type="button">+ New Chat</button>
+
+      <div class="contact-list" id="contactList">
+        <!-- populated by app.js -->
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="icon-btn" id="openSettingsBtn" title="Settings" aria-label="Settings">&#9881;</button>
+        <button class="icon-btn" id="navbarAvatarBtn" title="Your profile" aria-label="Your profile"></button>
+        <button class="icon-btn" id="logoutBtn" title="Log out" aria-label="Log out">&#10162;</button>
+      </div>
+
+      <button class="hidden-link" id="toggleHiddenBtn" style="display:none;"></button>
+    </aside>
+
+    <section class="chat-pane">
+      <div class="chat-empty-state" id="chatEmptyState">
+        <div class="avatar empty-icon">&#128172;</div>
+        <h1>Pick a character to begin</h1>
+        <p>Choose a personality from the left sidebar and start talking instantly.</p>
+      </div>
+
+      <div id="chatActive" class="chat-active" style="display:none;">
+        <div class="chat-header" id="chatHeader"></div>
+
+        <div class="chat-thread" id="chatThread"></div>
+
+        <form class="chat-input-bar" id="chatForm">
+          <textarea id="chatInput" rows="1" placeholder="Ask something..." required></textarea>
+          <button type="submit" class="send-btn" id="sendBtn" aria-label="Send">&#10148;</button>
+        </form>
+        <div class="disclaimer-strip">AI characters can make mistakes and aren't a substitute for professional advice.</div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ================= Settings modal ================= -->
+  <div class="modal-backdrop" id="settingsBackdrop" style="display:none;"></div>
+  <div class="modal" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2>Settings</h2>
+          <p class="modal-subtitle">Customize appearance, profile, and personality notes.</p>
+        </div>
+        <button class="icon-btn" id="settingsCloseBtn" aria-label="Close">&#10005;</button>
+      </div>
+
+      <div class="modal-grid">
+        <aside class="modal-sidebar">
+          <button class="settings-tab active" data-tab="appearance">Appearance</button>
+          <button class="settings-tab" data-tab="profile">Profile</button>
+          <button class="settings-tab" data-tab="ai">AI Personality</button>
+        </aside>
+
+        <section class="modal-content settings-body">
+          <div class="settings-panel active" id="panel-appearance">
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Theme</div>
+                <div class="toggle-note">Switch between Premium Dark and Light mode.</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="themeToggle" />
+                <span class="switch-track"></span>
+              </label>
+            </div>
+            <p class="form-hint">Saved on this browser only (it won't follow you to another device).</p>
+          </div>
+
+          <div class="settings-panel" id="panel-profile">
+            <form id="profileForm">
+              <div class="field">
+                <label for="profileName">Your name</label>
+                <input type="text" id="profileName" placeholder="What should characters call you?" maxlength="80" />
+              </div>
+              <div class="field">
+                <label>Avatar photo</label>
+                <div class="avatar-picker">
+                  <div id="profileAvatarPreview"></div>
+                  <div class="avatar-picker-actions">
+                    <button type="button" class="btn btn-ghost" id="chooseProfileAvatarBtn">Choose from device</button>
+                    <button type="button" class="btn btn-ghost" id="removeProfileAvatarBtn" style="display:none;">Remove</button>
+                    <input type="file" accept="image/*" id="profileAvatarFile" style="display:none;" />
+                  </div>
+                </div>
+              </div>
+              <div class="field">
+                <label for="profileAbout">About me</label>
+                <textarea id="profileAbout" rows="4" maxlength="500" placeholder="Anything you want characters to know about you"></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width:100%;">Save profile</button>
+            </form>
+          </div>
+
+          <div class="settings-panel" id="panel-ai">
+            <form id="aiContextForm">
+              <div class="field">
+                <label for="aiContextAbout">Tell the AI about yourself</label>
+                <textarea id="aiContextAbout" rows="6" maxlength="500" placeholder="This gets added to the start of a new conversation so characters have context about you."></textarea>
+              </div>
+              <p class="form-hint">Shares the same text as "About me" in the Profile tab. Since there's no separate backend field for this, it's inserted into your first message in a new chat - which also means it'll be visible if you scroll back to the top of that conversation later.</p>
+              <button type="submit" class="btn btn-primary" style="width:100%;">Save</button>
+            </form>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Edit character modal (per-chat 3-dot menu) ============ -->
+  <div class="modal-backdrop" id="editBackdrop" style="display:none;"></div>
+  <div class="modal" id="editModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Edit character (just for you)</h2>
+        <button class="icon-btn" id="editCloseBtn" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="settings-body">
+        <form id="editCharacterForm">
+          <input type="hidden" id="editCharacterId" />
+          <div class="field">
+            <label for="editDisplayName">Display name</label>
+            <input type="text" id="editDisplayName" maxlength="100" />
+          </div>
+          <div class="field">
+            <label>Avatar photo</label>
+            <div class="avatar-picker">
+              <div id="editAvatarPreview"></div>
+              <div class="avatar-picker-actions">
+                <button type="button" class="btn btn-ghost" id="chooseEditAvatarBtn">Choose from device</button>
+                <button type="button" class="btn btn-ghost" id="removeEditAvatarBtn" style="display:none;">Remove</button>
+                <input type="file" accept="image/*" id="editAvatarFile" style="display:none;" />
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="editExtraPersonality">Extra personality notes</label>
+            <textarea id="editExtraPersonality" rows="4" maxlength="800" placeholder="Added to your first new message as extra context - doesn't replace the character's real personality on the server."></textarea>
+          </div>
+          <p class="form-hint">These are local overrides saved on this browser only - they change how this character looks and behaves for you, not the shared character everyone else sees.</p>
+          <div style="display:flex; gap:10px;">
+            <button type="submit" class="btn btn-primary" style="flex:1;">Save</button>
+            <button type="button" class="btn btn-ghost" id="resetOverrideBtn">Reset to default</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

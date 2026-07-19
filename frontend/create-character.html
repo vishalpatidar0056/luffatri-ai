@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Luffatri AI - Create a character</title>
+<script src="js/theme.js"></script>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="page-topbar">
+    <a href="index.html" class="icon-btn" aria-label="Back">&#8592;</a>
+    <h1>Create a character</h1>
+  </div>
+
+  <div class="page-shell">
+    <div class="banner error" id="errorBanner" style="display:none;"></div>
+
+    <div class="create-layout">
+      <form id="createForm">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" id="name" placeholder="e.g. Orin the Lighthouse Keeper" maxlength="100" required />
+        </div>
+        <div class="field">
+          <label for="description">Short description</label>
+          <input type="text" id="description" placeholder="One line shown in the chat list" maxlength="500" />
+        </div>
+        <div class="field">
+          <label>Avatar photo</label>
+          <div class="avatar-picker">
+            <div id="avatarPreview"></div>
+            <div class="avatar-picker-actions">
+              <button type="button" class="btn btn-ghost" id="chooseAvatarBtn">Choose from device</button>
+              <button type="button" class="btn btn-ghost" id="removeAvatarBtn" style="display:none;">Remove</button>
+              <input type="file" accept="image/*" id="avatarFile" style="display:none;" />
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="personality">Personality / system prompt</label>
+          <textarea id="personality" rows="8" maxlength="4000" placeholder="You are… Describe how they talk, what they know, quirks, catchphrases, boundaries." required></textarea>
+        </div>
+        <div class="field" style="display:flex; align-items:center; gap:10px;">
+          <input type="checkbox" id="isPublic" checked style="width:auto;" />
+          <label for="isPublic" style="margin:0; text-transform:none; font-size:0.88rem;">
+            Make this character public (others can chat with it too)
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Create character</button>
+      </form>
+
+      <div class="preview-card">
+        <div class="preview-label">Live preview</div>
+        <div class="preview-contact" id="previewContact"></div>
+        <div class="preview-desc" id="previewDesc"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/create.js"></script>
+</body>
+</html>

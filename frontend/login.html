@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Luffatri AI - Sign in</title>
+    
+    <!-- CSS Links -->
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body class="login-page"></class=>>
+
+    <!-- Error Banner -->
+    <div class="banner error" id="errorBanner" style="display:none; position: absolute; top: 20px; z-index: 9999; background: #ff4c4c; color: white; padding: 10px 20px; border-radius: 8px;"></div>
+
+    <div class="container" id="container">
+        
+        <!-- Sign Up Form Panel (Left side initially hidden) -->
+        <div class="form-container sign-up">
+            <form id="registerForm">
+                <h1>Create Account</h1>
+                <div class="social-icons">
+                    <a href="#" class="icon"><i class="fa-brands fa-google"></i></a>
+                </div>
+                <span>or use your email for registration</span>
+                
+                <input type="text" id="registerName" placeholder="Name" required>
+                <input type="email" id="registerEmail" placeholder="Email" required autocomplete="email">
+                <input type="password" id="registerPassword" placeholder="Password" required autocomplete="new-password" minlength="8">
+                
+                <button type="submit" id="registerSubmitBtn">Sign Up</button>
+            </form>
+        </div>
+
+        <!-- Sign In Form Panel (Left side initially visible) -->
+        <div class="form-container sign-in">
+            <form id="loginForm">
+                <h1>Sign In</h1>
+                <div class="social-icons">
+                    <a href="#" class="icon"><i class="fa-brands fa-google"></i></a>
+                </div>
+                <span>or use your email & password</span>
+                
+                <input type="email" id="loginEmail" placeholder="you@example.com" required autocomplete="email">
+                <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+                <a href="#">Forgot Your Password?</a>
+                
+                <button type="submit" id="loginSubmitBtn">Sign In</button>
+            </form>
+        </div>
+
+        <!-- Dynamic Sliding Overlay Panel -->
+        <div class="toggle-container">
+            <div class="toggle">
+                <!-- Left side of the sliding panel -->
+                <div class="toggle-panel toggle-left">
+                    <h1>Welcome Back!</h1>
+                    <p>Sign in to keep tuning in to your characters</p>
+                    <button class="hidden" id="login">Sign In</button>
+                </div>
+                <!-- Right side of the sliding panel -->
+                <div class="toggle-panel toggle-right">
+                    <h1>New here?</h1>
+                    <p>Register to create an account and access all features</p>
+                    <button class="hidden" id="register">Sign Up</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>

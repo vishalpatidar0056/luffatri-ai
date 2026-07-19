@@ -1,6 +1,6 @@
 // api.js - shared across all pages.
 // Change this if your backend runs somewhere other than localhost:8000.
-const API_BASE_URL = window.API_BASE_URL || "https://luffatri-ai-frontend.onrender.com";
+const API_BASE_URL = window.API_BASE_URL || "https://luffatri-ai-backend.onrender.com";
 
 const Auth = {
   getToken() {

@@ -1,14 +1,9 @@
-fastapi==0.115.0
-uvicorn[standard]==0.30.6
-sqlalchemy==2.0.35
-pydantic[email]==2.9.2
-bcrypt==4.0.1
-pyjwt==2.9.0
-python-dotenv==1.0.1
-
-# Optional, only needed depending on which AI_PROVIDER you set in .env:
-google-generativeai==0.8.3   # AI_PROVIDER=gemini
-groq==0.11.0                 # AI_PROVIDER=groq
-
-# Only needed if you switch DATABASE_URL to MySQL instead of SQLite:
-# pymysql==1.1.1
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+python-multipart==0.0.9
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+google-generativeai==0.5.4
+pydantic==1.10.13
+pydantic[email]==1.10.13
+groq==0.11.0

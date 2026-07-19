@@ -30,14 +30,20 @@ load_dotenv()
 
 app = FastAPI(title="MyCharacterAI API")
 from fastapi.middleware.cors import CORSMiddleware
-app.add_middleware(
-       CORSMiddleware,
-       allow_origins=["https://luffatri-ai-frontend.onrender.com"], # we will lock this later. * works for first deploy
-       allow_credentials=True,
-       allow_methods=["*"],
-       allow_headers=["*"],
-   )
 
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://luffatri-ai-frontend.onrender.com",
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # Allow the static frontend (served from a different port/file://) to call this API.
 # Lock this down to your real domain before deploying publicly.
 app.add_middleware(

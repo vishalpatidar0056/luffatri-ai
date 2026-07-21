@@ -5,70 +5,225 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Luffatri AI — Sign in</title>
   <script src="js/theme.js"></script>
-  <link rel="stylesheet" href="css/style.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Jost', 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      padding: 16px;
+    }
+
+    /* Error banner */
+    #errorBanner {
+      display: none;
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      background: rgba(240,79,95,0.14);
+      color: #f04f5f;
+      border: 1px solid rgba(240,79,95,0.28);
+      padding: 12px 22px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      white-space: nowrap;
+      max-width: 90vw;
+    }
+
+    /* Main card */
+    .main {
+      width: 360px;
+      max-width: 100%;
+      height: 520px;
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+      background: url("https://doc-08-2c-docs.googleusercontent.com/docs/securesc/68c90smiglihng9534mvqmq1946dmis5/fo0picsp1nhiucmc0l25s29respgpr4j/1631524275000/03522360960922298374/03522360960922298374/1Sx0jhdpEpnNIydS4rnN4kHSJtU1EyWka?e=view&authuser=0&nonce=gcrocepgbb17m&user=03522360960922298374&hash=tfhgbs86ka6divo3llbvp93mg4csvb38") no-repeat center / cover;
+    }
+
+    /* Hide checkbox */
+    #chk { display: none; }
+
+    /* ---- Sign Up panel ---- */
+    .signup {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    label {
+      color: #fff;
+      font-size: 2rem;
+      font-weight: 700;
+      display: flex;
+      justify-content: center;
+      margin: 40px 0 16px;
+      cursor: pointer;
+      transition: transform 0.5s ease-in-out;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .signup label { margin-top: 44px; }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+      width: 65%;
+      height: auto;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.92);
+      color: #1a1a2e;
+      display: flex;
+      margin: 10px auto;
+      border: none;
+      outline: none;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-family: 'Jost', sans-serif;
+    }
+
+    input::placeholder { color: #888; }
+
+    button[type="submit"] {
+      width: 65%;
+      padding: 13px;
+      margin: 18px auto 0;
+      display: block;
+      color: #fff;
+      background: linear-gradient(135deg, #7c3aed, #22d3ee);
+      font-size: 0.92rem;
+      font-weight: 700;
+      font-family: 'Jost', sans-serif;
+      letter-spacing: 0.04em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+      transition: filter 0.2s ease, transform 0.2s ease;
+    }
+
+    button[type="submit"]:hover  { filter: brightness(1.12); transform: translateY(-1px); }
+    button[type="submit"]:active { transform: translateY(0); }
+    button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; pointer-events: none; }
+
+    /* ---- Login panel (slides up) ---- */
+    .login {
+      height: 480px;
+      background: rgba(240, 240, 248, 0.97);
+      border-radius: 60% / 10%;
+      transform: translateY(-200px);
+      transition: transform 0.8s ease-in-out;
+      padding-top: 10px;
+    }
+
+    .login label {
+      color: #4c1d95;
+      transform: scale(0.65);
+    }
+
+    .login input[type="email"],
+    .login input[type="password"] {
+      background: rgba(255,255,255,0.85);
+      border: 1px solid rgba(124,58,237,0.2);
+    }
+
+    .login button[type="submit"] {
+      background: linear-gradient(135deg, #4c1d95, #7c3aed);
+    }
+
+    /* Toggle: checked = Login mode */
+    #chk:checked ~ .login {
+      transform: translateY(-520px);
+    }
+
+    #chk:checked ~ .login label {
+      transform: scale(1);
+    }
+
+    #chk:checked ~ .signup label {
+      transform: scale(0.65);
+    }
+
+    /* Branding above card */
+    .brand-above {
+      position: absolute;
+      top: -52px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: rgba(255,255,255,0.85);
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    }
+
+    .brand-above span {
+      font-size: 0.8rem;
+      font-weight: 400;
+      display: block;
+      opacity: 0.65;
+      margin-top: 2px;
+      letter-spacing: 0.06em;
+    }
+
+    /* Wrapper so we can place brand above */
+    .card-wrapper {
+      position: relative;
+      margin-top: 52px;
+    }
+
+    @media (max-height: 620px) {
+      .main { height: 470px; }
+      .signup label { margin-top: 28px; }
+      .login { height: 430px; transform: translateY(-170px); }
+      #chk:checked ~ .login { transform: translateY(-470px); }
+    }
+  </style>
 </head>
-<body class="login-page">
+<body>
 
-  <!-- Error banner (positioned via CSS) -->
-  <div class="banner error" id="errorBanner" style="display:none; position:fixed; top:18px; left:50%; transform:translateX(-50%); z-index:9999; max-width:420px; min-width:220px;"></div>
+  <div id="errorBanner"></div>
 
-  <div class="container" id="container">
-
-    <!-- Sign Up panel -->
-    <div class="form-container sign-up">
-      <form id="registerForm" novalidate>
-        <h1>Create account</h1>
-        <div class="social-icons">
-          <a href="#" aria-label="Sign up with Google" title="Sign up with Google">
-            <i class="fa-brands fa-google" aria-hidden="true"></i>
-          </a>
-        </div>
-        <span>or use your email to register</span>
-
-        <input type="text"     id="registerName"     placeholder="Your name"      required autocomplete="name" />
-        <input type="email"    id="registerEmail"    placeholder="you@example.com" required autocomplete="email" />
-        <input type="password" id="registerPassword" placeholder="Password (8+ chars)" required autocomplete="new-password" minlength="8" />
-
-        <button type="submit" id="registerSubmitBtn">Sign Up</button>
-      </form>
+  <div class="card-wrapper">
+    <div class="brand-above">
+      ✦ Luffatri AI
+      <span>Character-driven chat</span>
     </div>
 
-    <!-- Sign In panel -->
-    <div class="form-container sign-in">
-      <form id="loginForm" novalidate>
-        <h1>Sign in</h1>
-        <div class="social-icons">
-          <a href="#" aria-label="Sign in with Google" title="Sign in with Google">
-            <i class="fa-brands fa-google" aria-hidden="true"></i>
-          </a>
-        </div>
-        <span>or use your email and password</span>
+    <div class="main">
+      <input type="checkbox" id="chk" aria-hidden="true" />
 
-        <input type="email"    id="loginEmail"    placeholder="you@example.com" required autocomplete="email" />
-        <input type="password" id="loginPassword" placeholder="••••••••"        required autocomplete="current-password" />
-        <a href="#">Forgot your password?</a>
+      <!-- Sign Up panel -->
+      <div class="signup">
+        <form id="registerForm" novalidate>
+          <label for="chk">Sign Up</label>
+          <input type="text"     id="registerName"     placeholder="Your name"          autocomplete="name" />
+          <input type="email"    id="registerEmail"    placeholder="Email address"       autocomplete="email" />
+          <input type="password" id="registerPassword" placeholder="Password (8+ chars)" autocomplete="new-password" minlength="8" />
+          <button type="submit" id="registerSubmitBtn">Create account</button>
+        </form>
+      </div>
 
-        <button type="submit" id="loginSubmitBtn">Sign In</button>
-      </form>
-    </div>
-
-    <!-- Sliding overlay -->
-    <div class="toggle-container" aria-hidden="true">
-      <div class="toggle">
-        <div class="toggle-panel toggle-left">
-          <h1>Welcome back!</h1>
-          <p>Sign in to keep chatting with your characters.</p>
-          <button class="hidden" id="login">Sign In</button>
-        </div>
-        <div class="toggle-panel toggle-right">
-          <h1>New here?</h1>
-          <p>Create an account and start building characters.</p>
-          <button class="hidden" id="register">Sign Up</button>
-        </div>
+      <!-- Login panel -->
+      <div class="login">
+        <form id="loginForm" novalidate>
+          <label for="chk">Login</label>
+          <input type="email"    id="loginEmail"    placeholder="Email address" autocomplete="email" />
+          <input type="password" id="loginPassword" placeholder="Password"       autocomplete="current-password" />
+          <button type="submit" id="loginSubmitBtn">Sign In</button>
+        </form>
       </div>
     </div>
-
   </div>
 
   <script src="js/api.js"></script>

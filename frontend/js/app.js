@@ -24,6 +24,123 @@ let isFirstMessageInThisChat  = false;
 let openDropdownId            = null;
 let typingRow                 = null;
 
+// ---------- Pinned characters (max 5) ----------
+
+const PINNED_KEY = "pinnedCharacters";
+
+function getPinned() {
+  try { return JSON.parse(localStorage.getItem(PINNED_KEY)) || []; } catch (_) { return []; }
+}
+
+function savePinned(arr) {
+  try { localStorage.setItem(PINNED_KEY, JSON.stringify(arr)); } catch (_) {}
+}
+
+function isPinned(id) {
+  return getPinned().includes(String(id));
+}
+
+function togglePin(id) {
+  const pinned = getPinned();
+  const sid = String(id);
+  if (pinned.includes(sid)) {
+    savePinned(pinned.filter((x) => x !== sid));
+    return false;
+  } else {
+    if (pinned.length >= 5) {
+      showToast("You can only pin up to 5 characters.");
+      return false;
+    }
+    savePinned([...pinned, sid]);
+    return true;
+  }
+}
+
+// ---------- Recent chat order ----------
+
+const RECENT_KEY = "recentChatOrder";
+
+function getRecentOrder() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch (_) { return []; }
+}
+
+function bumpRecent(id) {
+  const sid = String(id);
+  const order = getRecentOrder().filter((x) => x !== sid);
+  order.unshift(sid);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(order.slice(0, 100))); } catch (_) {}
+}
+
+// ---------- Toast (WhatsApp-style — no browser confirm) ----------
+
+function showToast(msg, duration = 3000) {
+  let t = document.getElementById("appToast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "appToast";
+    t.style.cssText = `
+      position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+      background:rgba(30,30,40,0.96);color:#fff;padding:11px 22px;
+      border-radius:999px;font-size:0.88rem;z-index:9999;
+      box-shadow:0 4px 24px rgba(0,0,0,0.38);pointer-events:none;
+      transition:opacity 0.25s ease;white-space:nowrap;
+    `;
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = "1";
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = "0"; }, duration);
+}
+
+// ---------- Custom delete confirmation (no browser confirm()) ----------
+
+function showDeleteConfirm(characterName, onConfirm) {
+  // Remove any existing
+  document.getElementById("deleteConfirmOverlay")?.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "deleteConfirmOverlay";
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:5000;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);
+  `;
+
+  overlay.innerHTML = `
+    <div style="
+      background:var(--bg-panel);border:1px solid var(--border-mid);
+      border-radius:18px;padding:28px 28px 22px;max-width:320px;width:90%;
+      box-shadow:0 20px 60px rgba(0,0,0,0.5);text-align:center;
+    ">
+      <div style="font-size:2rem;margin-bottom:12px;">🗑️</div>
+      <div style="font-weight:700;font-size:1.05rem;margin-bottom:8px;color:var(--text);">Delete character?</div>
+      <div style="color:var(--text-dim);font-size:0.88rem;margin-bottom:22px;line-height:1.5;">
+        "<strong>${escapeHtml(characterName)}</strong>" and all its chats will be permanently removed.
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button id="deleteCancelBtn" style="
+          flex:1;padding:11px;border-radius:999px;border:1px solid var(--border-mid);
+          background:var(--bg-panel-mid);color:var(--text);font-weight:600;cursor:pointer;font-size:0.9rem;
+        ">Cancel</button>
+        <button id="deleteConfirmBtn" style="
+          flex:1;padding:11px;border-radius:999px;border:none;
+          background:#f04f5f;color:#fff;font-weight:700;cursor:pointer;font-size:0.9rem;
+        ">Delete</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  overlay.querySelector("#deleteCancelBtn").addEventListener("click", () => overlay.remove());
+  overlay.querySelector("#deleteConfirmBtn").addEventListener("click", () => {
+    overlay.remove();
+    onConfirm();
+  });
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
 // ---------- Logout ----------
 
 logoutBtn.addEventListener("click", () => Auth.logout());
@@ -56,28 +173,72 @@ collapseSidebarBtn.addEventListener("click", () => {
   try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, sidebarCollapsed ? "1" : "0"); } catch (_) {}
 });
 
-// ---------- Mobile sidebar ----------
+// ---------- Mobile sidebar — WhatsApp style ----------
 
-// Mobile: WhatsApp-style — chat-open class slides sidebar out, chat pane in
 function openMobileSidebar() {
   appShell.classList.remove("chat-open");
 }
 
-function closeMobileSidebar() {
-  // On mobile, "closing sidebar" means opening the chat — handled by openCharacter
-  // This is called when navigating back; no-op here since chat-open drives it
-}
+function closeMobileSidebar() {}
+
+// ---------- Touch swipe on sidebar — swipe left to open chat, swipe right to show sidebar ----------
+
+(function setupSwipe() {
+  let startX = 0, startY = 0;
+  const THRESHOLD = 60;
+
+  document.addEventListener("touchstart", (e) => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener("touchend", (e) => {
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (Math.abs(dx) < Math.abs(dy) * 1.5) return; // mostly vertical — ignore
+    if (Math.abs(dx) < THRESHOLD) return;
+
+    if (dx < 0) {
+      // Swipe LEFT on sidebar → open chat (if a character is active)
+      if (!appShell.classList.contains("chat-open") && activeCharacter) {
+        appShell.classList.add("chat-open");
+      }
+    } else {
+      // Swipe RIGHT on chat → go back to sidebar
+      if (appShell.classList.contains("chat-open")) {
+        appShell.classList.remove("chat-open");
+      }
+    }
+  }, { passive: true });
+})();
 
 // ---------- Sidebar contact list ----------
 
+function getSortedCharacters() {
+  const pinned   = getPinned();
+  const recent   = getRecentOrder();
+  const merged   = allCharacters.map(withOverride);
+  const visible  = merged.filter((c) => showHidden ? true : !c.hidden);
+
+  const pinnedList   = visible.filter((c) => pinned.includes(String(c.id)));
+  const unpinnedList = visible.filter((c) => !pinned.includes(String(c.id)));
+
+  // Sort unpinned by recent chat order
+  unpinnedList.sort((a, b) => {
+    const ai = recent.indexOf(String(a.id));
+    const bi = recent.indexOf(String(b.id));
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+
+  return { pinnedList, unpinnedList, merged };
+}
+
 function renderContactList(filterText = "") {
   const q = filterText.trim().toLowerCase();
-
-  const merged  = allCharacters.map(withOverride);
-  const visible = merged.filter((c) => showHidden ? true : !c.hidden);
-  const filtered = q
-    ? visible.filter((c) => c.name.toLowerCase().includes(q))
-    : visible;
+  const { pinnedList, unpinnedList, merged } = getSortedCharacters();
 
   const hiddenCount = merged.filter((c) => c.hidden).length;
   if (hiddenCount > 0) {
@@ -91,6 +252,9 @@ function renderContactList(filterText = "") {
 
   contactList.innerHTML = "";
 
+  const allVisible = [...pinnedList, ...unpinnedList];
+  const filtered   = q ? allVisible.filter((c) => c.name.toLowerCase().includes(q)) : allVisible;
+
   if (filtered.length === 0) {
     contactList.innerHTML = `<div style="padding:14px 8px; color:var(--text-muted); font-size:0.84rem; text-align:center;">
       ${q ? "No characters match your search." : "No characters yet. Create one!"}
@@ -98,89 +262,121 @@ function renderContactList(filterText = "") {
     return;
   }
 
-  filtered.forEach((c) => {
-    const row = document.createElement("div");
-    row.className = "contact-row";
-    row.dataset.characterId = c.id;
-    row.setAttribute("role", "button");
-    row.setAttribute("tabindex", "0");
-    row.setAttribute("aria-label", `Chat with ${c.name}`);
+  // Pinned section header
+  const filteredPinned   = q ? pinnedList.filter((c)   => c.name.toLowerCase().includes(q)) : pinnedList;
+  const filteredUnpinned = q ? unpinnedList.filter((c) => c.name.toLowerCase().includes(q)) : unpinnedList;
 
-    if (activeCharacter && String(activeCharacter.id) === String(c.id)) row.classList.add("active");
-    if (c.hidden) row.style.opacity = "0.5";
+  if (!q && filteredPinned.length > 0) {
+    const header = document.createElement("div");
+    header.className = "contact-section-header";
+    header.textContent = "📌 Pinned";
+    contactList.appendChild(header);
+  }
 
-    row.innerHTML = `
-      ${avatarHtml(c.name, c.avatar_url, 44)}
-      <div class="contact-info">
-        <div class="contact-name">${escapeHtml(c.name)}</div>
-        <div class="contact-preview">${escapeHtml(c.description || "Tap to start chatting")}</div>
+  filteredPinned.forEach((c)   => contactList.appendChild(buildContactRow(c, true)));
+
+  if (!q && filteredPinned.length > 0 && filteredUnpinned.length > 0) {
+    const header = document.createElement("div");
+    header.className = "contact-section-header";
+    header.textContent = "All characters";
+    contactList.appendChild(header);
+  }
+
+  filteredUnpinned.forEach((c) => contactList.appendChild(buildContactRow(c, false)));
+}
+
+function buildContactRow(c, pinned) {
+  const row = document.createElement("div");
+  row.className = "contact-row";
+  row.dataset.characterId = c.id;
+  row.setAttribute("role", "button");
+  row.setAttribute("tabindex", "0");
+  row.setAttribute("aria-label", `Chat with ${c.name}`);
+
+  if (activeCharacter && String(activeCharacter.id) === String(c.id)) row.classList.add("active");
+  if (c.hidden) row.style.opacity = "0.5";
+
+  // Avatar: use placeholder image if avatar_url is null/undefined
+  const avatarSrc = c.avatar_url || `avatars/${c.name.toLowerCase().replace(/[^a-z0-9]/g, "_")}.jpg`;
+
+  row.innerHTML = `
+    ${avatarHtml(c.name, c.avatar_url, 44)}
+    <div class="contact-info">
+      <div class="contact-name">
+        ${pinned ? '<span class="pin-badge">📌</span>' : ""}
+        ${escapeHtml(c.name)}
       </div>
-      <button class="icon-btn contact-menu-btn" aria-label="Character options" aria-haspopup="true">&#8942;</button>
-      <div class="contact-dropdown" data-menu-for="${c.id}" role="menu">
-        <button data-action="edit" role="menuitem">Edit character</button>
-        ${c.hidden
-          ? `<button data-action="unhide" role="menuitem">Unhide</button>`
-          : `<button data-action="hide" role="menuitem">Hide from list</button>`
-        }
-        <button data-action="delete" class="danger" role="menuitem">Delete character</button>
-      </div>
-    `;
+      <div class="contact-preview">${escapeHtml(c.description || "Tap to start chatting")}</div>
+    </div>
+    <button class="icon-btn contact-menu-btn" aria-label="Character options" aria-haspopup="true">&#8942;</button>
+    <div class="contact-dropdown" data-menu-for="${c.id}" role="menu">
+      <button data-action="pin" role="menuitem">${pinned ? "Unpin" : "Pin"}</button>
+      <button data-action="edit" role="menuitem">Edit character</button>
+      ${c.hidden
+        ? `<button data-action="unhide" role="menuitem">Unhide</button>`
+        : `<button data-action="hide" role="menuitem">Hide from list</button>`
+      }
+      <button data-action="delete" class="danger" role="menuitem">Delete character</button>
+    </div>
+  `;
 
-    // Click on row → open character (not menu areas)
-    row.addEventListener("click", (e) => {
-      if (e.target.closest(".contact-menu-btn") || e.target.closest(".contact-dropdown")) return;
+  row.addEventListener("click", (e) => {
+    if (e.target.closest(".contact-menu-btn") || e.target.closest(".contact-dropdown")) return;
+    openCharacter(c.id);
+  });
+
+  row.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && !e.target.closest(".contact-menu-btn")) {
+      e.preventDefault();
       openCharacter(c.id);
-      closeMobileSidebar();
-    });
+    }
+  });
 
-    // Keyboard support
-    row.addEventListener("keydown", (e) => {
-      if ((e.key === "Enter" || e.key === " ") && !e.target.closest(".contact-menu-btn")) {
-        e.preventDefault();
-        openCharacter(c.id);
-        closeMobileSidebar();
-      }
-    });
+  const menuBtn  = row.querySelector(".contact-menu-btn");
+  const dropdown = row.querySelector(".contact-dropdown");
 
-    const menuBtn  = row.querySelector(".contact-menu-btn");
-    const dropdown = row.querySelector(".contact-dropdown");
+  menuBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = dropdown.classList.contains("open");
+    closeAllDropdowns();
+    if (!isOpen) {
+      dropdown.classList.add("open");
+      menuBtn.classList.add("open");
+      menuBtn.setAttribute("aria-expanded", "true");
+      openDropdownId = c.id;
+    }
+  });
 
-    menuBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const isOpen = dropdown.classList.contains("open");
-      closeAllDropdowns();
-      if (!isOpen) {
-        dropdown.classList.add("open");
-        menuBtn.classList.add("open");
-        menuBtn.setAttribute("aria-expanded", "true");
-        openDropdownId = c.id;
-      }
-    });
+  dropdown.querySelector('[data-action="pin"]').addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    const nowPinned = togglePin(c.id);
+    showToast(nowPinned ? `📌 ${c.name} pinned` : `${c.name} unpinned`);
+    renderContactList(searchInput.value);
+  });
 
-    dropdown.querySelector('[data-action="edit"]').addEventListener("click", (e) => {
-      e.stopPropagation();
-      closeAllDropdowns();
-      openEditModal(c);
-    });
+  dropdown.querySelector('[data-action="edit"]').addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    openEditModal(c);
+  });
 
-    const hideBtn = dropdown.querySelector('[data-action="hide"], [data-action="unhide"]');
-    hideBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      closeAllDropdowns();
-      saveCharacterOverride(c.id, { hidden: !c.hidden });
-      renderContactList(searchInput.value);
-    });
+  const hideBtn = dropdown.querySelector('[data-action="hide"], [data-action="unhide"]');
+  hideBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    saveCharacterOverride(c.id, { hidden: !c.hidden });
+    renderContactList(searchInput.value);
+  });
 
-    const deleteBtn = dropdown.querySelector('[data-action="delete"]');
-    deleteBtn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      closeAllDropdowns();
-      if (!confirm(`Delete "${c.name}"? This will permanently remove the character and all its chats.`)) return;
+  dropdown.querySelector('[data-action="delete"]').addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    showDeleteConfirm(c.name, async () => {
       try {
         const token = Auth.getToken();
-        // Resolve the base URL the same way api.js does (works for both local and deployed)
-        const base = (typeof API_BASE !== "undefined" ? API_BASE : "").replace(/\/$/, "");
-        const res = await fetch(`${base}/api/characters/${c.id}`, {
+        const base  = (typeof API_BASE !== "undefined" ? API_BASE : "").replace(/\/$/, "");
+        const res   = await fetch(`${base}/api/characters/${c.id}`, {
           method: "DELETE",
           headers: token ? { "Authorization": `Bearer ${token}` } : {},
         });
@@ -198,14 +394,15 @@ function renderContactList(filterText = "") {
           activeCharacter              = null;
           appShell.classList.remove("chat-open");
         }
+        showToast(`${c.name} deleted`);
         renderContactList(searchInput.value);
       } catch (err) {
         showBannerError(`Couldn't delete character: ${err.message}`);
       }
     });
-
-    contactList.appendChild(row);
   });
+
+  return row;
 }
 
 function closeAllDropdowns() {
@@ -310,51 +507,40 @@ function showTypingIndicator() {
 }
 
 function removeTypingIndicator() {
-  if (typingRow) {
-    typingRow.remove();
-    typingRow = null;
-  }
+  if (typingRow) { typingRow.remove(); typingRow = null; }
 }
 
 // ---------- Chat pane ----------
 
 function scrollToBottom() {
-  requestAnimationFrame(() => {
-    chatThread.scrollTop = chatThread.scrollHeight;
-  });
+  requestAnimationFrame(() => { chatThread.scrollTop = chatThread.scrollHeight; });
 }
 
 function appendMessage(role, content) {
   const row    = document.createElement("div");
   row.className = `msg-row ${role}`;
-
   const bubble = document.createElement("div");
   bubble.className  = "msg-bubble";
   bubble.textContent = content;
 
   if (role === "assistant" && activeCharacter) {
-    row.appendChild(
-      (() => {
-        const div = document.createElement("div");
-        div.innerHTML = avatarHtml(activeCharacter.name, activeCharacter.avatar_url, 30);
-        return div.firstElementChild;
-      })()
-    );
+    row.appendChild((() => {
+      const div = document.createElement("div");
+      div.innerHTML = avatarHtml(activeCharacter.name, activeCharacter.avatar_url, 30);
+      return div.firstElementChild;
+    })());
     row.appendChild(bubble);
   } else if (role === "user") {
     const profile = getUserProfile();
     row.appendChild(bubble);
-    row.appendChild(
-      (() => {
-        const div = document.createElement("div");
-        div.innerHTML = avatarHtml(profile.name || "You", profile.avatarUrl, 30);
-        return div.firstElementChild;
-      })()
-    );
+    row.appendChild((() => {
+      const div = document.createElement("div");
+      div.innerHTML = avatarHtml(profile.name || "You", profile.avatarUrl, 30);
+      return div.firstElementChild;
+    })());
   } else {
     row.appendChild(bubble);
   }
-
   chatThread.appendChild(row);
   scrollToBottom();
 }
@@ -368,13 +554,14 @@ async function openCharacter(characterId) {
     return;
   }
   activeCharacter = withOverride(raw);
+  bumpRecent(characterId); // move to top of recent list
+  renderContactList(searchInput.value); // re-render so order updates
 
   window.location.hash = `character_id=${characterId}`;
   chatEmptyState.style.display = "none";
   chatActive.style.display     = "flex";
-  appShell.classList.add("chat-open"); // WhatsApp-style: show chat pane on mobile
+  appShell.classList.add("chat-open");
 
-  // Build header (includes back button for mobile)
   chatHeader.innerHTML = `
     <button class="icon-btn chat-back-btn" aria-label="Back to characters">&#8592;</button>
     <div class="chat-header-avatar">${avatarHtml(activeCharacter.name, activeCharacter.avatar_url, 52)}</div>
@@ -389,19 +576,17 @@ async function openCharacter(characterId) {
     </div>
   `;
 
-  // Back button wires up after render
   chatHeader.querySelector(".chat-back-btn").addEventListener("click", () => {
     window.location.hash = "";
     chatEmptyState.style.display = "flex";
     chatActive.style.display     = "none";
     activeCharacter              = null;
-    appShell.classList.remove("chat-open"); // WhatsApp-style: go back to sidebar
+    appShell.classList.remove("chat-open");
     renderContactList(searchInput.value);
   });
 
-  renderContactList(searchInput.value);
-  chatThread.innerHTML = "";
-  chatInput.value      = "";
+  chatThread.innerHTML   = "";
+  chatInput.value        = "";
   chatInput.style.height = "auto";
   chatInput.focus();
 
@@ -422,16 +607,12 @@ chatInput.addEventListener("input", () => {
 });
 
 chatInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    chatForm.requestSubmit();
-  }
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); chatForm.requestSubmit(); }
 });
 
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!activeCharacter) return;
-
   const typedMessage = chatInput.value.trim();
   if (!typedMessage) return;
 
@@ -442,7 +623,6 @@ chatForm.addEventListener("submit", async (e) => {
 
   const statusEl = document.getElementById("chatStatus");
   if (statusEl) { statusEl.textContent = "typing…"; statusEl.classList.add("typing"); }
-
   showTypingIndicator();
 
   let messageToSend = typedMessage;
@@ -460,6 +640,8 @@ chatForm.addEventListener("submit", async (e) => {
     });
     removeTypingIndicator();
     appendMessage("assistant", data.reply);
+    bumpRecent(activeCharacter.id); // bump again after reply so it stays on top
+    renderContactList(searchInput.value);
   } catch (err) {
     removeTypingIndicator();
     appendMessage("assistant", `(Something went wrong: ${err.message})`);
@@ -476,7 +658,7 @@ function showBannerError(msg) {
   let b = document.getElementById("appErrorBanner");
   if (!b) {
     b = document.createElement("div");
-    b.id        = "appErrorBanner";
+    b.id = "appErrorBanner";
     b.className = "banner error";
     b.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:100;max-width:480px;min-width:240px;";
     document.body.appendChild(b);
@@ -502,7 +684,6 @@ async function init() {
     return;
   }
   renderContactList();
-
   const hashId = getCharacterIdFromHash();
   if (hashId) openCharacter(hashId);
 }
@@ -520,12 +701,8 @@ window.addEventListener("hashchange", () => {
   }
 });
 
-// Keyboard: Escape closes dropdowns / modals
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
-    closeAllDropdowns();
-    closeMobileSidebar();
-  }
+  if (e.key === "Escape") { closeAllDropdowns(); }
 });
 
 init();

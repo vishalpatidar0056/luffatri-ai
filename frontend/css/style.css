@@ -502,6 +502,24 @@ textarea:focus {
 .contact-dropdown button:hover { background: var(--bg-hover); }
 .contact-dropdown button.danger { color: var(--danger); }
 
+/* Section headers in contact list */
+.contact-section-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  padding: 8px 12px 4px;
+  margin-top: 4px;
+}
+
+/* Pin badge */
+.pin-badge {
+  font-size: 0.7rem;
+  margin-right: 3px;
+  vertical-align: middle;
+}
+
 /* Hidden link */
 .hidden-link {
   background: transparent;
@@ -992,7 +1010,7 @@ body.login-page {
   padding: 20px;
 }
 
-body.login-page::before {
+body.login-page::before { 
   /* Inherit ambient radial from body::before */
 }
 

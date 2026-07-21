@@ -1,14 +1,10 @@
-// theme.js - loaded first, on every page. Keeps light/dark theme in sync
-// across pages and applies it immediately to avoid a flash of the wrong theme.
+// theme.js - loaded first on every page. Applies theme immediately to avoid flash.
 
 const THEME_KEY = "theme"; // 'dark' | 'light'
 
 function getStoredTheme() {
-  try {
-    return localStorage.getItem(THEME_KEY);
-  } catch (_) {
-    return null;
-  }
+  try   { return localStorage.getItem(THEME_KEY); }
+  catch (_) { return null; }
 }
 
 function getSystemTheme() {
@@ -26,14 +22,17 @@ function applyTheme(theme) {
 }
 
 function setTheme(theme) {
-  try {
-    localStorage.setItem(THEME_KEY, theme);
-  } catch (_) {
-    /* localStorage unavailable (private browsing etc) - theme just won't persist */
-  }
+  try   { localStorage.setItem(THEME_KEY, theme); }
+  catch (_) { /* localStorage unavailable */ }
   applyTheme(theme);
 }
 
-// Apply immediately on script load (this file is included before the page
-// renders its body), so there's no flash of the default theme.
+// Apply immediately on script load (before body renders) to prevent flash.
 applyTheme(getEffectiveTheme());
+
+// Respond to system theme changes (when user hasn't set an explicit preference)
+if (window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", (e) => {
+    if (!getStoredTheme()) applyTheme(e.matches ? "light" : "dark");
+  });
+}

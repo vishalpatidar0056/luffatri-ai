@@ -2,22 +2,22 @@
 
 Auth.requireLogin();
 
-const nameInput = document.getElementById("name");
-const descInput = document.getElementById("description");
-const personalityInput = document.getElementById("personality");
-const previewContact = document.getElementById("previewContact");
-const previewDesc = document.getElementById("previewDesc");
-const createForm = document.getElementById("createForm");
-const submitBtn = document.getElementById("submitBtn");
-const errorBanner = document.getElementById("errorBanner");
+const nameInput       = document.getElementById("name");
+const descInput       = document.getElementById("description");
+const personalityInput= document.getElementById("personality");
+const previewContact  = document.getElementById("previewContact");
+const previewDesc     = document.getElementById("previewDesc");
+const createForm      = document.getElementById("createForm");
+const submitBtn       = document.getElementById("submitBtn");
+const errorBanner     = document.getElementById("errorBanner");
 
 const avatarPicker = setupAvatarPicker({
-  fileInput: document.getElementById("avatarFile"),
-  previewEl: document.getElementById("avatarPreview"),
-  removeBtn: document.getElementById("removeAvatarBtn"),
-  getName: () => nameInput.value.trim() || "Untitled character",
+  fileInput:      document.getElementById("avatarFile"),
+  previewEl:      document.getElementById("avatarPreview"),
+  removeBtn:      document.getElementById("removeAvatarBtn"),
+  getName:        () => nameInput.value.trim() || "New character",
   initialDataUrl: null,
-  onChange: renderPreview,
+  onChange:       renderPreview,
 });
 
 document.getElementById("chooseAvatarBtn").addEventListener("click", () => {
@@ -25,10 +25,11 @@ document.getElementById("chooseAvatarBtn").addEventListener("click", () => {
 });
 
 function renderPreview() {
-  const name = nameInput.value.trim() || "Untitled character";
-  const desc = descInput.value.trim() || "Your one-line description will show up here.";
+  const name = nameInput.value.trim() || "New character";
+  const desc = descInput.value.trim() || "Your one-line description will appear here.";
+
   previewContact.innerHTML = `
-    ${avatarHtml(name, avatarPicker.getValue(), 48)}
+    ${avatarHtml(name, avatarPicker.getValue(), 44)}
     <div class="preview-name">${escapeHtml(name)}</div>
   `;
   previewDesc.textContent = desc;
@@ -40,26 +41,26 @@ renderPreview();
 createForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   errorBanner.style.display = "none";
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Creating…";
+  submitBtn.disabled        = true;
+  submitBtn.textContent     = "Creating…";
 
   try {
     const character = await apiFetch("/api/characters", {
       method: "POST",
-      auth: true,
+      auth:   true,
       body: {
-        name: nameInput.value.trim(),
+        name:        nameInput.value.trim(),
         description: descInput.value.trim(),
         personality: personalityInput.value.trim(),
-        avatar_url: avatarPicker.getValue(),
-        is_public: document.getElementById("isPublic").checked,
+        avatar_url:  avatarPicker.getValue(),
+        is_public:   document.getElementById("isPublic").checked,
       },
     });
     window.location.href = `index.html#character_id=${character.id}`;
   } catch (err) {
-    errorBanner.textContent = err.message;
+    errorBanner.textContent   = err.message;
     errorBanner.style.display = "block";
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Create character";
+    submitBtn.disabled        = false;
+    submitBtn.textContent     = "Create character";
   }
 });

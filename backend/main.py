@@ -167,6 +167,23 @@ def create_character(
     return char
 
 
+@app.delete("/api/characters/{character_id}")
+def delete_character(
+    character_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    char = db.query(Character).filter(Character.id == character_id).first()
+    if not char:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Character not found")
+    # Only the creator can delete their own character; public/seeded chars (created_by=None) can't be deleted
+    if char.created_by is None or char.created_by != user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "You can only delete characters you created")
+    db.delete(char)
+    db.commit()
+    return {"ok": True}
+
+
 # ---------- Chat routes ----------
 
 @app.get("/api/chats", response_model=list[ChatOut])

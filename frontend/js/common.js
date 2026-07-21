@@ -1,4 +1,4 @@
-// common.js - small shared UI helpers used across pages.
+// common.js - shared UI helpers used across pages.
 
 function escapeHtml(str) {
   const div = document.createElement("div");
@@ -6,9 +6,7 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// A small fixed set of gradient pairs so each character/person gets a
-// consistent, distinct look (hashed from its name) instead of everyone
-// getting the same default circle.
+// Consistent gradient per-name (hashed)
 const AVATAR_GRADIENTS = [
   ["#7f66ff", "#00c2ff"],
   ["#00a884", "#00e0b8"],
@@ -33,62 +31,48 @@ function gradientForName(name) {
 }
 
 /**
- * Renders an avatar: the character/person's avatar_url image if one is set
- * (falling back gracefully if the image fails to load), otherwise a
- * gradient circle with their initial.
+ * Returns an avatar HTML string.
+ * If avatarUrl is set, renders an <img> with a fallback to the initial.
  */
 function avatarHtml(name, avatarUrl, sizePx = 48) {
   const safeName = (name || "?").trim();
-  const initial = escapeHtml(safeName.charAt(0).toUpperCase() || "?");
-  const bg = gradientForName(safeName);
+  const initial  = escapeHtml(safeName.charAt(0).toUpperCase() || "?");
+  const bg       = gradientForName(safeName);
   const fontSize = Math.round(sizePx * 0.42);
 
   if (avatarUrl) {
     const safeUrl = escapeHtml(avatarUrl);
-    // If the image fails to load (broken link, blocked host, etc.), swap the
-    // element for the initials fallback instead of showing a broken-image icon.
-    return `
-      <div class="avatar" style="width:${sizePx}px;height:${sizePx}px;background:${bg};font-size:${fontSize}px;">
-        <img src="${safeUrl}" alt=""
-             onerror="this.replaceWith(Object.assign(document.createElement('span'), {textContent: '${initial}'}));" />
-      </div>
-    `;
+    return `<div class="avatar" style="width:${sizePx}px;height:${sizePx}px;background:${bg};font-size:${fontSize}px;" aria-hidden="true">
+      <img src="${safeUrl}" alt=""
+           onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';" />
+      <span style="display:none;">${initial}</span>
+    </div>`;
   }
 
-  return `
-    <div class="avatar" style="width:${sizePx}px;height:${sizePx}px;background:${bg};font-size:${fontSize}px;">
-      ${initial}
-    </div>
-  `;
+  return `<div class="avatar" style="width:${sizePx}px;height:${sizePx}px;background:${bg};font-size:${fontSize}px;" aria-hidden="true">${initial}</div>`;
 }
 
 /**
  * Reads an image File, downsizes it on a canvas, and returns a compressed
- * JPEG data URL - small enough to store in localStorage (for profile /
- * personal overrides) or in the backend's TEXT column (for shared character
- * photos), without needing any file-upload endpoint at all.
- *
- * Progressively lowers quality if the first attempt is still too large.
- * Throws if it can't get under maxChars even at low quality (very busy /
- * huge source images) - the caller should show that message to the user.
+ * JPEG data URL small enough for localStorage / backend TEXT column.
  */
 async function fileToResizedDataUrl(file, { maxDim = 220, startQuality = 0.82, maxChars = 60000 } = {}) {
   const img = await new Promise((resolve, reject) => {
     const el = new Image();
-    el.onload = () => resolve(el);
+    el.onload  = () => resolve(el);
     el.onerror = () => reject(new Error("Couldn't read that image file."));
     el.src = URL.createObjectURL(file);
   });
 
   const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-  const w = Math.max(1, Math.round(img.width * scale));
-  const h = Math.max(1, Math.round(img.height * scale));
+  const w     = Math.max(1, Math.round(img.width  * scale));
+  const h     = Math.max(1, Math.round(img.height * scale));
 
   const canvas = document.createElement("canvas");
-  canvas.width = w;
+  canvas.width  = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#ffffff"; // flattens any transparency (PNG/GIF) onto white
+  ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, w, h);
   ctx.drawImage(img, 0, 0, w, h);
   URL.revokeObjectURL(img.src);
@@ -96,6 +80,7 @@ async function fileToResizedDataUrl(file, { maxDim = 220, startQuality = 0.82, m
   let quality = startQuality;
   let dataUrl = canvas.toDataURL("image/jpeg", quality);
   let attempts = 0;
+
   while (dataUrl.length > maxChars && attempts < 5) {
     quality = Math.max(0.15, quality - 0.15);
     dataUrl = canvas.toDataURL("image/jpeg", quality);
@@ -103,16 +88,15 @@ async function fileToResizedDataUrl(file, { maxDim = 220, startQuality = 0.82, m
   }
 
   if (dataUrl.length > maxChars) {
-    throw new Error("This image is too complex to compress small enough - try a simpler or smaller photo.");
+    throw new Error("This image is too complex to compress — try a simpler or smaller photo.");
   }
+
   return dataUrl;
 }
 
 /**
- * Wires up a "choose from device" avatar picker: hidden file input + a live
- * preview circle + a remove button. Calls onChange(dataUrlOrNull) whenever
- * the photo changes. Used on the create-character page, the profile
- * settings tab, and the per-character edit modal.
+ * Wires up an avatar picker: hidden file input + live preview + remove button.
+ * Calls onChange(dataUrlOrNull) whenever photo changes.
  */
 function setupAvatarPicker({ fileInput, previewEl, removeBtn, getName, initialDataUrl, onChange }) {
   let current = initialDataUrl || null;
@@ -143,12 +127,10 @@ function setupAvatarPicker({ fileInput, previewEl, removeBtn, getName, initialDa
   });
 
   render();
+
   return {
-    getValue: () => current,
-    setValue: (dataUrl) => {
-      current = dataUrl || null;
-      render();
-    },
-    refresh: () => render(),
+    getValue:  () => current,
+    setValue:  (dataUrl) => { current = dataUrl || null; render(); },
+    refresh:   () => render(),
   };
 }

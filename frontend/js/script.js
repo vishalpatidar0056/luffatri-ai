@@ -1,23 +1,22 @@
-// js/script.js - Handles the sliding animations
+// script.js - sliding animation for login page
 
 document.addEventListener("DOMContentLoaded", () => {
-    const container = document.getElementById('container');
-    const registerBtn = document.getElementById('register');
-    const loginBtn = document.getElementById('login');
+  const container  = document.getElementById("container");
+  const registerBtn= document.getElementById("register");
+  const loginBtn   = document.getElementById("login");
 
-    if (registerBtn && loginBtn && container) {
-        // Slide to Sign Up
-        registerBtn.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevents accidental form submissions
-            container.classList.add("active");
-        });
+  if (!container || !registerBtn || !loginBtn) {
+    console.warn("Login animation: missing container, register, or login elements.");
+    return;
+  }
 
-        // Slide to Sign In
-        loginBtn.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevents accidental form submissions
-            container.classList.remove("active");
-        });
-    } else {
-        console.error("Sliding animation error: Could not find 'register', 'login', or 'container' IDs in HTML.");
-    }
+  registerBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    container.classList.add("active");
+  });
+
+  loginBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    container.classList.remove("active");
+  });
 });
